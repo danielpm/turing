@@ -1,0 +1,131 @@
+<html>
+    <body>
+        <pre id="canvas"></pre>
+        <script>
+            // http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript?str=abc
+            function getParameterByName(name, url) {
+                if (!url) {
+                url = window.location.href;
+                }
+                name = name.replace(/[\[\]]/g, "\\$&");
+                var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+                    results = regex.exec(url);
+                if (!results) return null;
+                if (!results[2]) return '';
+                return decodeURIComponent(results[2].replace(/\+/g, " "));
+            }
+
+            let tape = getParameterByName('tape');
+
+            if (tape == null) {
+                window.location.href = (window.location.href + '?tape=001e');
+            }
+
+            let canvas = document.getElementById('canvas');
+
+            function Turing() {
+                this.isRunning = true;
+
+                this.tape = [null];
+                this.currentTapePosition = 0;
+                this.vertexs = [];
+                this.currentNode = 0;
+            }
+
+            Turing.prototype.toString = function() {
+                let arr = [];
+                for (let i=0; i<this.tape.length; i++) {
+                    if (this.tape[i] != undefined)
+                        arr.push(this.tape[i]);
+                    else
+                        arr.push(' ');
+                }
+                arr.push('\n');
+                for (let i=0; i<this.currentTapePosition; i++) {
+                    arr.push(' ');
+                }
+                arr.push('^');
+                arr.push('\n');
+                arr.push(`current node: ${this.currentNode}`);
+                
+                return arr.join('');
+            }
+
+            Turing.prototype.addVertex = function(from, to, read, write, move) {
+                this.vertexs.push({
+                    from: from,
+                    to: to,
+                    read: read,
+                    write: write,
+                    move: move
+                })
+            }
+
+            Turing.prototype.setTape = function(tape) {
+                this.tape = tape;
+            }
+
+            Turing.prototype.cell = function(position, value) {
+                if (value != undefined)
+                    this.tape[position] = value;
+                
+                return this.tape[position];
+            }
+
+            Turing.prototype.step = function() {
+                let node = this.currentNode;
+                let value = this.tape[this.currentTapePosition];
+
+                let next = this.vertexs.filter(v => {
+                    let sameNode = v.from == node;
+                    let sameValue = v.read == value;
+                    let bothNull = (v.read == null && (value == null || value == undefined));
+                    return sameNode && (sameValue || bothNull);
+                })[0];
+
+                if (next == null || next == undefined) {
+                    this.isRunning = false;
+                    return;
+                }
+
+                if (next.write != null) {
+                    this.tape[this.currentTapePosition] = next.write;
+                }
+
+                if (next.move == 'RIGHT')
+                    this.currentTapePosition++;
+                else if (next.move == 'LEFT')
+                    this.currentTapePosition--;
+
+                this.currentNode = next.to;
+            }
+
+            let t = new Turing();
+
+            t.setTape(tape.split(''));
+
+            t.addVertex(0, 1, '0', '1', 'RIGHT');
+            t.addVertex(0, 3, '1', '0', 'RIGHT');
+
+            t.addVertex(1, 1, '0', '0', 'RIGHT');
+            t.addVertex(1, 1, '1', '1', 'RIGHT');
+            t.addVertex(1, 2, 'e', 'e', 'RIGHT');
+
+            t.addVertex(3, 1, '0', '1', 'RIGHT');
+            t.addVertex(3, 3, '1', '0', 'RIGHT');
+            t.addVertex(3, 4, 'e', '1', 'RIGHT');
+
+            t.addVertex(4, 5, null, 'e', 'RIGHT');
+
+            canvas.innerHTML = t.toString();
+
+            setInterval(() => {
+                if (!t.isRunning)
+                    return;
+                
+                t.step();
+                canvas.innerHTML = t.toString();
+            }, 1000)
+        </script>
+    </body>
+</html>
